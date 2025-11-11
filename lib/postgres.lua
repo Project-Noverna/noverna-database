@@ -1,6 +1,6 @@
-if not LoadResourceFile(GetCurrentResourceName(), "typescript/dist/index.js") then
-	error('^1[Noverna-Database]^7 TypeScript build not found. Please build the TypeScript source before using this resource.')
-end
+-- if not LoadResourceFile(GetCurrentResourceName(), "typescript/dist/index.js") then
+-- 	error('^1[Noverna-Database]^7 TypeScript build not found. Please build the TypeScript source before using this resource.')
+-- end
 
 ---@class Postgres
 ---@field private resourceName string
