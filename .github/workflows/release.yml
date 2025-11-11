@@ -1,0 +1,102 @@
+name: Create Release
+
+on:
+    push:
+        tags:
+            - "v*.*.*" # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+    build-and-release:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+                  cache-dependency-path: "/typescript/package-lock.json"
+
+            - name: Install dependencies
+              working-directory: ./typescript
+              run: npm ci
+
+            - name: Build TypeScript
+              working-directory: ./typescript
+              run: npm run build
+
+            - name: Verify build output
+              run: |
+                  if [ ! -f "./typescript/dist/index.js" ]; then
+                    echo "Build failed - dist/index.js not found"
+                    exit 1
+                  fi
+                  echo "Build successful!"
+
+            - name: Create release archive
+              run: |
+                  mkdir -p release
+                  cp -r  release/
+
+                  # Remove unnecessary files from release
+                  rm -rf release/noverna-database/typescript/node_modules
+                  rm -rf release/noverna-database/typescript/src
+                  rm -f release/noverna-database/typescript/tsconfig.json
+                  rm -f release/noverna-database/typescript/build.js
+                  rm -f release/noverna-database/typescript/package-lock.json
+
+                  # Keep only essential files
+                  cd release
+                  zip -r ../noverna-database.zip noverna-database/
+
+            - name: Extract version from tag
+              id: version
+              run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: noverna-database.zip
+                  name: Release ${{ steps.version.outputs.VERSION }}
+                  body: |
+                      ## Noverna PostgreSQL Database Wrapper ${{ steps.version.outputs.VERSION }}
+
+                      ### Installation
+                      1. Download `noverna-database.zip`
+                      2. Extract to your `resources/` folder
+                      3. Add to your `server.cfg`:
+                         ```
+                         ensure noverna-database
+                         ```
+                      4. Configure database connection in `server.cfg` (see [INSTALL.md](https://github.com/${{ github.repository }}/blob/main//INSTALL.md))
+
+                      ### What's Included
+                      - ✅ Pre-built JavaScript (no build required!)
+                      - ✅ Lua library for easy integration
+                      - ✅ Complete documentation
+                      - ✅ Example scripts
+
+                      ### Requirements
+                      - FiveM Server (artifact 5848+)
+                      - PostgreSQL 12+
+                      - Node.js not required for end users!
+
+                      ### Documentation
+                      - [Installation Guide](https://github.com/${{ github.repository }}/blob/main//INSTALL.md)
+                      - [API Documentation](https://github.com/${{ github.repository }}/blob/main//README.md)
+
+                      ### Support
+                      Found a bug? [Open an issue](https://github.com/${{ github.repository }}/issues)
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v3
+              with:
+                  name: build-output
+                  path: /typescript/dist/
